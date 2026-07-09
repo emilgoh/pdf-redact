@@ -25,6 +25,23 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Try it (demo)
+
+A sample PDF with fake sensitive data is included at `samples/sample.pdf`.
+Run the demo to redact it and see the proof that the words are truly removed:
+
+```bash
+./setup.sh      # first time only: create .venv + install deps
+./demo.sh
+```
+
+`demo.sh` prints the text before and after redaction, then verifies that terms
+like `John Smith`, `SSN`, and the SSN/email values are no longer extractable
+from the output (`samples/sample_redacted.pdf`). Open that file to see the black
+redaction boxes.
+
+To regenerate the sample PDF itself: `python samples/make_sample.py`.
+
 ## Usage
 
 ```bash

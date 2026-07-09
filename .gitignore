@@ -1,5 +1,10 @@
 .venv/
 __pycache__/
 *.pyc
+
+# Redacted outputs are generated, never commit them
 *_redacted.pdf
-sample.pdf
+
+# Ignore stray PDFs at the repo root, but keep the demo sample under samples/
+/*.pdf
+!samples/sample.pdf
