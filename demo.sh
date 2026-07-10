@@ -20,8 +20,10 @@ fi
 SAMPLE="samples/sample.pdf"
 OUTPUT="samples/sample_redacted.pdf"
 
-# Words/phrases we'll redact in this demo.
+# Words/phrases we'll redact in this demo. The phone number is not listed —
+# it is caught by the built-in "phone" pattern (-p phone) instead.
 TERMS=("John Smith" "SSN" "123-45-6789" "john.smith@example.com")
+PHONE="(555) 123-4567"
 
 if [ ! -f "$SAMPLE" ]; then
     echo "Sample not found; generating it ..."
@@ -31,15 +33,15 @@ fi
 echo "=== 1. Text in the ORIGINAL sample (sensitive data visible) ==="
 "$PY" -c "import fitz,sys; print(chr(10).join(p.get_text() for p in fitz.open('$SAMPLE')))"
 
-echo "=== 2. Running redaction ==="
-"$PY" pdf_redact.py "$SAMPLE" "${TERMS[@]}" -o "$OUTPUT"
+echo "=== 2. Running redaction (words + built-in phone pattern + metadata scrub) ==="
+"$PY" pdf_redact.py "$SAMPLE" "${TERMS[@]}" -p phone --scrub-metadata -o "$OUTPUT"
 
 echo
 echo "=== 3. Text in the REDACTED output (sensitive data removed) ==="
 "$PY" -c "import fitz; print(chr(10).join(p.get_text() for p in fitz.open('$OUTPUT')))"
 
 echo "=== 4. Verifying the terms are truly gone (not just hidden) ==="
-"$PY" - "$OUTPUT" "${TERMS[@]}" <<'PY'
+"$PY" - "$OUTPUT" "${TERMS[@]}" "$PHONE" <<'PY'
 import sys, fitz
 out, terms = sys.argv[1], sys.argv[2:]
 text = "\n".join(p.get_text() for p in fitz.open(out)).lower()

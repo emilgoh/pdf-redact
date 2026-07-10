@@ -8,3 +8,17 @@ __pycache__/
 # Ignore stray PDFs at the repo root, but keep the demo sample under samples/
 /*.pdf
 !samples/sample.pdf
+
+# Python packaging/build artifacts
+*.egg-info/
+dist/
+build/
+
+# pytest
+.pytest_cache/
+
+#vim
+*.swp
+
+#mac
+.DS_STORE

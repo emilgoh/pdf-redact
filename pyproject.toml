@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf-redact"
+version = "0.2.0"
+description = "Truly redact words, patterns, and regions from PDFs — the text is removed, not just covered."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Emil Goh" }]
+keywords = ["pdf", "redact", "redaction", "privacy", "pii"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Text Processing",
+]
+dependencies = ["pymupdf>=1.24"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+pdf-redact = "pdf_redact:main"
+pdf-redact-gui = "pdf_redact_gui:main"
+
+[tool.setuptools]
+py-modules = ["pdf_redact", "pdf_redact_gui"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
