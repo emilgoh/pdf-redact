@@ -15,6 +15,8 @@ Features:
 - Built-in **patterns**: SSNs, emails, phone numbers, credit cards, IP addresses
 - Custom **regexes** and **fuzzy matching** for typos / OCR errors
 - Fixed **rectangular regions** (e.g. photos, signatures) and whole pages
+- **Whole-table redaction**: auto-detects tables on a page and blacks out
+  the entire table, borders included
 - **OCR** for scanned/image-only PDFs (via Tesseract)
 - **Metadata scrubbing** and **annotation/form-field stripping**
 - **Batch mode** (a whole directory at once), **dry-run preview**,
@@ -80,6 +82,10 @@ python pdf_redact.py report.pdf "Confidential" --dry-run
 # Black out a photo region on page 1, and all of page 3
 python pdf_redact.py report.pdf --area "1:72,100,300,250" --area "3:all"
 
+# Detect and black out entire tables: all tables on page 2,
+# and only the 1st table on page 5
+python pdf_redact.py report.pdf --table 2 --table 5:1
+
 # Scanned PDF: OCR the pages, then black out the matched image regions
 python pdf_redact.py scan.pdf "John Smith" --ocr
 
@@ -100,6 +106,7 @@ python pdf_redact.py report.pdf "John" --fuzzy 0.8
 | `-p, --pattern NAME` | Built-in pattern: `ssn`, `email`, `phone`, `credit-card`, `ip`. Repeatable. |
 | `-r, --regex REGEX` | Custom regex (case-insensitive). Repeatable. |
 | `--area PAGE:X0,Y0,X1,Y1` | Redact a fixed rectangle (PDF points, origin top-left). `PAGE` is 1-based or `all`; the rect may be `all` for the whole page. Repeatable. |
+| `--table PAGE[:N]` | Detect tables on a page and redact them whole (borders included). `PAGE` is 1-based or `all`; add `:N` to pick only the N-th table on the page. Warns if no table is detected. Repeatable. |
 | `--fuzzy RATIO` | Also redact near-matches of single-word terms (similarity 0–1, e.g. `0.8`). |
 | `--fill COLOR` | Box color: name, `#rrggbb`, `R,G,B` (0–255), or `none` (default `black`). |
 | `--ocr` | OCR pages with no extractable text (scanned PDFs). Requires [Tesseract](https://tesseract-ocr.github.io/) (`brew install tesseract`). |
@@ -122,8 +129,10 @@ python pdf_redact_gui.py     # or:  pdf-redact-gui  (if pip-installed)
 It starts a small local web server (127.0.0.1 only — the PDF never leaves
 your machine) and opens your browser. Drag a PDF onto the page, type the
 terms (one per line), tick any built-in patterns, and click **Redact**; the
-redacted copy is downloaded. A "Preview only" checkbox shows the matches
-without writing anything. It uses the same true-removal engine as the CLI.
+redacted copy is downloaded. The **Tables** field blacks out entire detected
+tables on the given pages (e.g. `2,5` — or `all`), and a "Preview only"
+checkbox shows the matches without writing anything. It uses the same
+true-removal engine as the CLI.
 
 > Why a browser instead of a native window? Apple's system Python ships the
 > ancient Tcl/Tk 8.5, which renders blank Tkinter windows on modern macOS —
@@ -160,7 +169,9 @@ installed).
   cell borders/other cells are left intact. But matching is per cell — a
   phrase spanning multiple cells won't match, and redacting a *label* (e.g.
   `SSN`) does not redact the *value* in the adjacent cell. Target the values
-  themselves (e.g. `-p ssn`) or use `--area` for whole rows/columns.
+  themselves (e.g. `-p ssn`), remove the whole table with `--table`, or use
+  `--area` for rows/columns. Table *detection* (`--table`) relies on ruling
+  lines/text layout and needs a digital PDF — verify with `--dry-run`.
 - `--scrub-metadata` clears document-level metadata (Info dictionary + XMP).
   EXIF data *inside* embedded images is not touched.
 - `--ocr` requires Tesseract and only OCRs pages that have no extractable

@@ -33,7 +33,7 @@ try:
 except ImportError:  # pragma: no cover
     sys.exit("PyMuPDF is required. Install it with:  pip install pymupdf")
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 #: Built-in regex patterns usable via ``--pattern NAME``.
 PATTERNS: dict[str, str] = {
@@ -125,6 +125,34 @@ def parse_area(spec: str):
     return page, rect
 
 
+def parse_table(spec: str):
+    """Parse a ``--table`` spec: ``PAGE`` or ``PAGE:N`` (both 1-based), or ``all``.
+
+    Redacts entire detected tables: every table on the page, or only the N-th
+    one. Returns ``(page_index_or_None, table_index_or_None)`` where ``None``
+    means "all pages" / "every table".
+    """
+    page_part, sep, index_part = spec.partition(":")
+    if page_part.lower() == "all":
+        page = None
+    else:
+        try:
+            page = int(page_part) - 1
+        except ValueError:
+            raise ValueError(f"Invalid table spec {spec!r} (expected PAGE, PAGE:N, or all)") from None
+        if page < 0:
+            raise ValueError(f"Page numbers are 1-based; got {page_part!r}")
+    index = None
+    if sep:
+        try:
+            index = int(index_part) - 1
+        except ValueError:
+            raise ValueError(f"Invalid table number in {spec!r}") from None
+        if index < 0:
+            raise ValueError(f"Table numbers are 1-based; got {index_part!r}")
+    return page, index
+
+
 def load_wordlist(path: Path) -> list[str]:
     """Load redaction terms from a text file: one per line, ``#`` comments allowed."""
     if not path.is_file():
@@ -148,7 +176,7 @@ class Match:
 
     page: int  # 1-based page number
     rect: tuple  # (x0, y0, x1, y1)
-    kind: str  # "word" | "fuzzy" | "pattern:<name>" | "regex" | "area"
+    kind: str  # "word" | "fuzzy" | "pattern:<name>" | "regex" | "area" | "table"
     label: str  # human-readable; may contain the term (shown in --dry-run only)
     digest: "str | None"  # sha-256 prefix of the term/pattern; None for areas
 
@@ -158,6 +186,7 @@ class RedactionResult:
     input_path: Path
     output_path: "Path | None"  # None when dry_run
     matches: list = field(default_factory=list)
+    warnings: list = field(default_factory=list)
 
     @property
     def pages(self) -> list:
@@ -185,6 +214,34 @@ def _strip_annotations(page) -> None:
         page.delete_annot(annot)
     for widget in list(page.widgets() or []):
         page.delete_widget(widget)
+
+
+def _table_matches(page, tables, hits: set) -> list:
+    """Detect tables on this page and match them against ``--table`` specs.
+
+    ``tables`` is [(page_index_or_None, table_index_or_None), ...]; specs that
+    matched at least one table anywhere are added to ``hits`` (for warnings).
+    """
+    relevant = [spec for spec in tables if spec[0] is None or spec[0] == page.number]
+    if not relevant:
+        return []
+    found = page.find_tables().tables
+    pageno = page.number + 1
+    matches = []
+    seen = set()
+    for spec in relevant:
+        _, want_index = spec
+        for i, tab in enumerate(found):
+            if want_index is not None and want_index != i:
+                continue
+            hits.add(spec)
+            if i in seen:  # same table requested by overlapping specs
+                continue
+            seen.add(i)
+            rect = fitz.Rect(tab.bbox)
+            label = f"table {i + 1} ({tab.row_count} rows x {tab.col_count} cols)"
+            matches.append(Match(pageno, tuple(rect), "table", label, None))
+    return matches
 
 
 def _page_matches(page, words, regex_specs, areas, fuzzy, ocr) -> list:
@@ -242,6 +299,7 @@ def redact_pdf(
     patterns=(),
     regexes=(),
     areas=(),
+    tables=(),
     fuzzy=None,
     ocr=False,
     scrub_metadata=False,
@@ -257,7 +315,10 @@ def redact_pdf(
 
     ``patterns`` are names from :data:`PATTERNS`; ``regexes`` are custom Python
     regular expressions; ``areas`` are ``(page_index_or_None, rect_or_None)``
-    pairs as returned by :func:`parse_area`; ``fuzzy`` is a 0-1 similarity
+    pairs as returned by :func:`parse_area`; ``tables`` are
+    ``(page_index_or_None, table_index_or_None)`` pairs as returned by
+    :func:`parse_table` — each detected table is redacted whole (its full
+    bounding box, borders included); ``fuzzy`` is a 0-1 similarity
     threshold applied to single-word terms. With ``dry_run`` nothing is written.
     """
     input_path = Path(input_path)
@@ -277,8 +338,10 @@ def redact_pdf(
         regex_specs.append(("regex", rx))
     if fuzzy is not None and not 0 < fuzzy <= 1:
         raise ValueError("--fuzzy threshold must be in (0, 1]")
-    if not (words or regex_specs or areas):
-        raise ValueError("Nothing to redact: give words, --wordlist, --pattern, --regex, or --area.")
+    if not (words or regex_specs or areas or tables):
+        raise ValueError(
+            "Nothing to redact: give words, --wordlist, --pattern, --regex, --area, or --table."
+        )
 
     if output_path is None:
         output_path = input_path.with_name(f"{input_path.stem}_redacted{input_path.suffix}")
@@ -286,6 +349,8 @@ def redact_pdf(
 
     doc = fitz.open(input_path)
     all_matches = []
+    warnings = []
+    table_hits = set()
     try:
         page_count = doc.page_count
         show_progress = not quiet and page_count >= _PROGRESS_THRESHOLD
@@ -296,6 +361,8 @@ def redact_pdf(
             if strip_annotations and not dry_run:
                 _strip_annotations(page)
             matches = _page_matches(page, words, regex_specs, areas, fuzzy, ocr)
+            if tables:
+                matches.extend(_table_matches(page, tables, table_hits))
             all_matches.extend(matches)
             if matches and not dry_run:
                 for m in matches:
@@ -306,6 +373,13 @@ def redact_pdf(
         if show_progress:
             print("\r" + " " * 40 + "\r", end="", file=sys.stderr, flush=True)
 
+        for spec in tables:
+            if spec not in table_hits:
+                t_page, t_index = spec
+                where = "any page" if t_page is None else f"page {t_page + 1}"
+                which = "table" if t_index is None else f"table #{t_index + 1}"
+                warnings.append(f"no {which} detected on {where}")
+
         if not dry_run:
             if scrub_metadata:
                 doc.set_metadata({})
@@ -314,13 +388,15 @@ def redact_pdf(
     finally:
         doc.close()
 
-    return RedactionResult(input_path, None if dry_run else output_path, all_matches)
+    return RedactionResult(input_path, None if dry_run else output_path, all_matches, warnings)
 
 
 def _print_result(result: RedactionResult, dry_run: bool) -> None:
     n = len(result.matches)
     if dry_run:
         print(f"{result.input_path}: {n} match(es) (dry run, nothing written)")
+        for warning in result.warnings:
+            print(f"  Warning: {warning}")
         for m in result.matches:
             label = m.label if len(m.label) <= 48 else m.label[:45] + "..."
             rect = ", ".join(f"{v:.1f}" for v in m.rect)
@@ -328,6 +404,8 @@ def _print_result(result: RedactionResult, dry_run: bool) -> None:
         return
     pages = len(result.pages)
     print(f"{result.input_path}: redacted {n} occurrence(s) on {pages} page(s).")
+    for warning in result.warnings:
+        print(f"  Warning: {warning}")
     if n == 0:
         print("  Warning: no matches found — the output is an unmodified copy.")
     print(f"  Wrote: {result.output_path}")
@@ -403,6 +481,10 @@ def main(argv=None) -> int:
                         help="Redact a fixed rectangle (points, origin top-left). "
                              "PAGE is 1-based or 'all'; the rect may be 'all' for the whole page. "
                              "Repeatable.")
+    parser.add_argument("--table", action="append", default=[], metavar="PAGE[:N]",
+                        help="Detect tables on a page and redact them whole (borders included). "
+                             "PAGE is 1-based or 'all'; add :N to pick only the N-th table on "
+                             "the page. Repeatable.")
     parser.add_argument("--fuzzy", type=float, default=None, metavar="RATIO",
                         help="Also redact near-matches of single-word terms at this similarity "
                              "ratio (0-1, e.g. 0.8) — catches typos and OCR errors.")
@@ -428,6 +510,7 @@ def main(argv=None) -> int:
     try:
         fill = parse_fill(args.fill)
         areas = [parse_area(spec) for spec in args.area]
+        tables = [parse_table(spec) for spec in args.table]
         words = list(args.words)
         for wl in args.wordlist:
             words.extend(load_wordlist(wl))
@@ -442,6 +525,7 @@ def main(argv=None) -> int:
                 patterns=args.pattern,
                 regexes=args.regex,
                 areas=areas,
+                tables=tables,
                 fuzzy=args.fuzzy,
                 ocr=args.ocr,
                 scrub_metadata=args.scrub_metadata,

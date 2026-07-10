@@ -26,7 +26,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from pdf_redact import PATTERNS, __version__, parse_fill, redact_pdf
+from pdf_redact import PATTERNS, __version__, parse_fill, parse_table, redact_pdf
 
 _MAX_UPLOAD = 200 * 1024 * 1024  # 200 MB
 
@@ -67,6 +67,11 @@ Everything runs locally; the file never leaves your machine.</p>
 
 <fieldset><legend>Built-in patterns</legend>__CHECKBOXES__</fieldset>
 
+<fieldset><legend>Tables</legend>
+  <label>Black out entire detected tables on pages:
+    <input id="tables" size="16" placeholder="e.g. 2,5 — or all"></label>
+</fieldset>
+
 <fieldset><legend>Options</legend>
   <label class="inline"><input type="checkbox" id="scrub" checked> Scrub metadata</label>
   <label class="inline">Fill:
@@ -104,15 +109,16 @@ document.getElementById('go').addEventListener('click', async () => {
   const terms = document.getElementById('terms').value;
   const patterns = [...document.querySelectorAll('input[name=pattern]:checked')]
                    .map(cb => cb.value).join(',');
+  const tables = document.getElementById('tables').value.trim();
   status.className = ''; matches.hidden = true;
   if (!file) { status.className = 'err'; status.textContent = 'Choose a PDF first.'; return; }
-  if (!terms.trim() && !patterns) {
+  if (!terms.trim() && !patterns && !tables) {
     status.className = 'err';
-    status.textContent = 'Enter at least one term or tick a pattern.'; return;
+    status.textContent = 'Enter at least one term, tick a pattern, or give table pages.'; return;
   }
   const preview = document.getElementById('preview').checked;
   const params = new URLSearchParams({
-    terms, patterns,
+    terms, patterns, tables,
     fill: document.getElementById('fill').value,
     scrub: document.getElementById('scrub').checked ? '1' : '0',
     preview: preview ? '1' : '0',
@@ -207,6 +213,8 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             fill = parse_fill(qval("fill", "black"))
+            tables = [parse_table(tok.strip())
+                      for tok in qval("tables").split(",") if tok.strip()]
             with tempfile.TemporaryDirectory(prefix="pdf-redact-") as tmpdir:
                 in_path = Path(tmpdir) / filename
                 in_path.write_bytes(data)
@@ -215,6 +223,7 @@ class Handler(BaseHTTPRequestHandler):
                     words,
                     fill=fill,
                     patterns=patterns,
+                    tables=tables,
                     scrub_metadata=qval("scrub") == "1",
                     dry_run=dry_run,
                     quiet=True,
@@ -229,6 +238,8 @@ class Handler(BaseHTTPRequestHandler):
 
         summary = (f"Redacted {len(result.matches)} occurrence(s) "
                    f"on {len(result.pages)} page(s).")
+        if result.warnings:
+            summary += " Warning: " + "; ".join(result.warnings) + "."
         extra = [("X-Redact-Summary", urllib.parse.quote(summary))]
         if dry_run:
             lines = [

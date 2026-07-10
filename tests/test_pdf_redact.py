@@ -163,6 +163,83 @@ def test_parse_area():
             pr.parse_area(bad)
 
 
+# --------------------------------------------------------------------------- tables
+
+def draw_table(page, rows, x0=72, y0=100, col_w=140, row_h=30):
+    """Draw a bordered grid with cell text; returns the table bbox."""
+    n_rows, n_cols = len(rows), len(rows[0])
+    for i in range(n_rows + 1):
+        page.draw_line((x0, y0 + i * row_h), (x0 + n_cols * col_w, y0 + i * row_h))
+    for j in range(n_cols + 1):
+        page.draw_line((x0 + j * col_w, y0), (x0 + j * col_w, y0 + n_rows * row_h))
+    for r, row in enumerate(rows):
+        for c, cell in enumerate(row):
+            page.insert_text((x0 + c * col_w + 6, y0 + r * row_h + 19), cell, fontsize=10)
+    return fitz.Rect(x0, y0, x0 + n_cols * col_w, y0 + n_rows * row_h)
+
+
+@pytest.fixture
+def table_pdf(tmp_path):
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((72, 60), "Quarterly staff report", fontsize=14)
+    draw_table(page, [["Name", "SSN"], ["John Smith", "123-45-6789"]])
+    path = tmp_path / "table.pdf"
+    doc.save(path)
+    doc.close()
+    return path
+
+
+def test_parse_table():
+    assert pr.parse_table("2") == (1, None)
+    assert pr.parse_table("all") == (None, None)
+    assert pr.parse_table("3:2") == (2, 1)
+    assert pr.parse_table("all:1") == (None, 0)
+    for bad in ("0", "x", "2:0", "2:x"):
+        with pytest.raises(ValueError):
+            pr.parse_table(bad)
+
+
+def test_table_redacted_whole(table_pdf):
+    result = pr.redact_pdf(table_pdf, tables=[(0, None)], quiet=True)
+    out = text_of(result.output_path)
+    for gone in ("Name", "SSN", "John Smith", "123-45-6789"):
+        assert gone not in out
+    assert "Quarterly staff report" in out  # text outside the table survives
+    assert [m.kind for m in result.matches] == ["table"]
+    assert result.warnings == []
+
+
+def test_table_warning_when_none_found(sample):
+    result = pr.redact_pdf(sample, tables=[(0, None)], quiet=True)
+    assert result.matches == []
+    assert any("no table detected on page 1" in w for w in result.warnings)
+
+
+def test_table_index_selection(tmp_path):
+    doc = fitz.open()
+    page = doc.new_page()
+    draw_table(page, [["Alpha", "One"]], y0=100)
+    draw_table(page, [["Beta", "Two"]], y0=300)
+    path = tmp_path / "two_tables.pdf"
+    doc.save(path)
+    doc.close()
+
+    result = pr.redact_pdf(path, tables=[(0, 1)], quiet=True)  # second table only
+    out = text_of(result.output_path)
+    assert "Alpha" in out
+    assert "Beta" not in out
+    assert len(result.matches) == 1
+
+
+def test_table_cli_and_dry_run(table_pdf, capsys):
+    assert pr.main([str(table_pdf), "--table", "1", "--dry-run"]) == 0
+    printed = capsys.readouterr().out
+    assert "table 1 (2 rows x 2 cols)" in printed
+    assert pr.main([str(table_pdf), "--table", "1", "-q"]) == 0
+    assert "John Smith" not in text_of(table_pdf.with_name("table_redacted.pdf"))
+
+
 # --------------------------------------------------------------------------- fill
 
 def test_parse_fill():
@@ -318,6 +395,30 @@ def test_gui_redact_roundtrip(gui_server, sample, tmp_path):
     assert "John Smith" not in text
     assert "123-45-6789" not in text
     assert "john.smith@example.com" not in text
+
+
+def test_gui_table_redaction(gui_server, table_pdf, tmp_path):
+    params = urllib.parse.urlencode({"tables": "1", "filename": "table.pdf"})
+    req = urllib.request.Request(f"{gui_server}/redact?{params}",
+                                 data=table_pdf.read_bytes(), method="POST")
+    with urllib.request.urlopen(req) as resp:
+        assert resp.status == 200
+        out = tmp_path / "gui_table_out.pdf"
+        out.write_bytes(resp.read())
+    text = text_of(out)
+    assert "John Smith" not in text and "SSN" not in text
+    assert "Quarterly staff report" in text
+
+
+def test_gui_table_warning_in_summary(gui_server, sample):
+    params = urllib.parse.urlencode(
+        {"tables": "1", "preview": "1", "filename": "sample.pdf"}
+    )
+    req = urllib.request.Request(f"{gui_server}/redact?{params}",
+                                 data=sample.read_bytes(), method="POST")
+    with urllib.request.urlopen(req) as resp:
+        summary = urllib.parse.unquote(resp.headers["X-Redact-Summary"])
+    assert "no table detected" in summary
 
 
 def test_gui_preview_mode(gui_server, sample):
