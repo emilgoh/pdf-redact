@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdf-redact"
-version = "0.3.0"
+version = "1.0.0"
 description = "Truly redact words, patterns, and regions from PDFs — the text is removed, not just covered."
 readme = "README.md"
 requires-python = ">=3.9"

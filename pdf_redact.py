@@ -33,7 +33,7 @@ try:
 except ImportError:  # pragma: no cover
     sys.exit("PyMuPDF is required. Install it with:  pip install pymupdf")
 
-__version__ = "0.3.0"
+__version__ = "1.0.0"
 
 #: Built-in regex patterns usable via ``--pattern NAME``.
 PATTERNS: dict[str, str] = {
