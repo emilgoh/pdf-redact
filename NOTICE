@@ -1,0 +1,18 @@
+pdf-redact
+Copyright 2026 Emil Goh
+
+This product includes software developed by Emil Goh.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this file except in compliance with the License. You may obtain a copy
+of the License in the accompanying LICENSE file or at
+http://www.apache.org/licenses/LICENSE-2.0
+
+---
+
+This project depends at runtime on PyMuPDF (https://pymupdf.readthedocs.io/),
+published by Artifex Software, Inc., which is dual-licensed under the GNU
+Affero General Public License v3.0 or an Artifex commercial license. PyMuPDF
+is not included in this repository and is not covered by the Apache-2.0 grant
+above; it is installed separately as a dependency. See
+metadata/THIRD_PARTY_LICENSES.md for details.

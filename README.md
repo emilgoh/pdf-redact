@@ -187,3 +187,19 @@ installed).
 - Interactive (click-and-drag) region selection instead of coordinates.
 - Deep image scrubbing: EXIF/GPS removal inside embedded images.
 - Cross-line/cross-column phrase matching.
+
+## License
+
+This project's own code is released under the **Apache License 2.0** — see
+[`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+
+**Dependency note (important):** the redaction engine is
+[PyMuPDF](https://pymupdf.readthedocs.io/), which is **dual-licensed under the
+GNU AGPL-3.0 or a paid Artifex commercial license**. The Apache-2.0 grant above
+covers only the original code in this repository; it does not relicense PyMuPDF.
+If you *distribute* pdf-redact together with PyMuPDF, or run it as a network
+service (note the bundled GUI is an HTTP server), the AGPL's copyleft
+obligations may attach to the combined work unless you hold an Artifex
+commercial license. Purely internal/personal use is generally outside those
+triggers. See [`metadata/THIRD_PARTY_LICENSES.md`](metadata/THIRD_PARTY_LICENSES.md)
+for the full inventory. This is a factual summary, not legal advice.
