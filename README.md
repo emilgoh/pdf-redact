@@ -75,3 +75,43 @@ python pdf_redact.py report.pdf "Confidential" -o clean.pdf
   searchable text, so there is nothing to match — those would need OCR first.
 - Matches contiguous text as laid out on the page; a term split across lines
   may not be found as a single phrase.
+
+## TODO
+
+Ideas for future improvements, roughly in order of usefulness:
+
+- **OCR support for scanned/image PDFs** — run OCR (e.g. Tesseract) to locate
+  text in scanned pages, then redact the corresponding image regions.
+- **Regex / pattern-based redaction** — built-in patterns for SSNs, emails,
+  phone numbers, credit card numbers, IP addresses, etc., not just literal
+  word matches.
+- **Redact images/photos** — support blacking out arbitrary rectangular
+  regions (e.g. faces, signatures, logos) selected by coordinates or
+  interactively, not just matched text.
+- **Metadata scrubbing** — strip document metadata (author, title, creation
+  tool, GPS/EXIF in embedded images) that can leak identity even after text
+  redaction.
+- **Batch/directory mode** — redact all PDFs in a folder in one invocation.
+- **Config file for word lists** — load redaction terms from a `.txt`/YAML
+  file instead of passing them all on the command line.
+- **Whole-page / annotation-aware redaction** — also strip comments,
+  highlights, form field values, and hidden layers (OCR text layer,
+  bookmarks) that might reference sensitive content.
+- **Dry-run / preview mode** — report matches and their locations without
+  writing an output file, so users can verify before committing to a redact.
+- **Custom fill color / redaction style** — currently hardcoded to black;
+  allow custom colors or a "blur" style.
+- **Progress output for large PDFs** — page-by-page progress bar for
+  multi-hundred-page documents.
+- **Unit/integration test suite** — automated tests (pytest) beyond the
+  manual `demo.sh` script, including edge cases like text split across
+  lines/columns.
+- **Packaging** — publish as a pip-installable package (`pipx install
+  pdf-redact`) with a proper console-script entry point instead of requiring
+  a cloned repo + venv.
+- **GUI or web front-end** — a simple drag-and-drop interface for
+  non-technical users.
+- **Fuzzy/partial matching** — optional Levenshtein-distance matching to
+  catch typos or OCR errors in the target terms.
+- **Undo/audit log** — record what was redacted (terms + page/location)
+  without leaking the actual redacted content, for compliance audit trails.
