@@ -1,0 +1,21 @@
+{
+  "generated": "2026-07-10T09:44:39+00:00",
+  "commit": "bfc04a1046dbd74615fc7014392d21934792963a",
+  "tag": "v1.0.0",
+  "algorithm": "sha256",
+  "note": "Hashes of all git-tracked files at the commit above. Regenerate with: git ls-files | xargs shasum -a 256",
+  "files": {
+    ".gitignore": "39f19e2751ed5081ab055c9c07488ddfa123f30993fdc67977a987a6a2f9ca14",
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "README.md": "21abf9ac81bad646e128f835d091f30a308c5fae516228a35ce9f533c028502c",
+    "demo.sh": "afc6ff302c99ee13a619f2165a36052e5f65894f1b63d94f60ad88a9115b6142",
+    "pdf_redact.py": "239f4b5241b53b7f9426ff51cf805add7cff63b8ce661cbe8179502fb574537f",
+    "pdf_redact_gui.py": "09896e2fec6068aa70d1ef5f6d1ed8a98ea4786b6db6a6787d733ee761239011",
+    "pyproject.toml": "77869bfa2698d83164b84c24aa2efd347ef0cf815afbfce1065bdf3650c20357",
+    "requirements.txt": "d76360abda740f49ab86e3d5ea3d24cfba7f83d17a47a4187866600d019d7a3f",
+    "samples/make_sample.py": "d4d7f8c7ec22c4a5196b2e0b303835c7846f01f1eb42524111597a9d52cab6b2",
+    "samples/sample.pdf": "d0a31b304d2a41002a86e62bb5a8733d976e431dfe74b0e28ec525e5697e1899",
+    "setup.sh": "cc15848033f4d2bbd411f5a8775f7f424992f1e64613e39575ff5c787e664d06",
+    "tests/test_pdf_redact.py": "23b366fe10b126415f011e901318c9e896c2829cfc12483a1209440b8e0b8662"
+  }
+}

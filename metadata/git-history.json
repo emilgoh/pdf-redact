@@ -1,0 +1,75 @@
+{
+  "generated": "2026-07-10T09:44:39+00:00",
+  "generator": "git log --pretty=format:'%H|%an|%ae|%aI|%s|%(trailers...)'",
+  "repository": "https://github.com/emilgoh/pdf-redact",
+  "tags": [
+    {
+      "name": "v1.0.0",
+      "commit": "bfc04a1046dbd74615fc7014392d21934792963a"
+    }
+  ],
+  "commits": [
+    {
+      "hash": "bfc04a1046dbd74615fc7014392d21934792963a",
+      "author": "emilgoh",
+      "email": "emilgoh@outlook.com",
+      "date": "2026-07-10T17:26:28+08:00",
+      "subject": "Bumped version to 1.0.0",
+      "co_authors": [
+        "Claude Fable 5 <noreply@anthropic.com>"
+      ]
+    },
+    {
+      "hash": "7ccd12e3928b12eaa5a7bba70fd8c5dc5c195c6d",
+      "author": "emilgoh",
+      "email": "emilgoh@outlook.com",
+      "date": "2026-07-10T17:23:20+08:00",
+      "subject": "Added whole-table redaction to CLI and GUI (v0.3.0)",
+      "co_authors": [
+        "Claude Fable 5 <noreply@anthropic.com>"
+      ]
+    },
+    {
+      "hash": "7fa922e1794a05552fd667b154725016d2714fcc",
+      "author": "emilgoh",
+      "email": "emilgoh@outlook.com",
+      "date": "2026-07-10T17:05:50+08:00",
+      "subject": "Implemented all README TODOs: patterns, OCR, batch mode, web GUI, tests",
+      "co_authors": [
+        "Claude Fable 5 <noreply@anthropic.com>"
+      ]
+    },
+    {
+      "hash": "1a9b06651b365271779a9cbfebdbd2df203ccb8e",
+      "author": "emilgoh",
+      "email": "emilgoh@outlook.com",
+      "date": "2026-07-10T16:11:48+08:00",
+      "subject": "Added TODO segment in README",
+      "co_authors": []
+    },
+    {
+      "hash": "997b8e8dd1a2c95cbc430b525b19f805e45865aa",
+      "author": "emilgoh",
+      "email": "emilgoh@outlook.com",
+      "date": "2026-07-09T20:07:44+08:00",
+      "subject": "Added demo for users to try out",
+      "co_authors": []
+    },
+    {
+      "hash": "fab93142106c8539adc39380ea683a03abae4190",
+      "author": "emilgoh",
+      "email": "emilgoh@outlook.com",
+      "date": "2026-07-09T19:58:50+08:00",
+      "subject": "Initial development",
+      "co_authors": []
+    },
+    {
+      "hash": "c6ef9b34a77cceea97b8cae31df8557970f37ecc",
+      "author": "Emil Goh",
+      "email": "37289809+emilgoh@users.noreply.github.com",
+      "date": "2026-07-09T19:47:53+08:00",
+      "subject": "Initial commit",
+      "co_authors": []
+    }
+  ]
+}
